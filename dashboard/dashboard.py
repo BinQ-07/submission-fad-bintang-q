@@ -1,10 +1,9 @@
-import os
 import streamlit as st
 import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
 
-# ── Page Config ───────────────────────────────────────────────────────────────
+# Konfigurasi halaman Streamlit
 st.set_page_config(
     page_title="Bike Rental Analytics",
     page_icon="🚲",
@@ -12,7 +11,7 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# ── Custom CSS ────────────────────────────────────────────────────────────────
+# Css kustom untuk styling dashboard
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
@@ -63,8 +62,8 @@ html, body, [class*="css"] { font-family: 'DM Sans', sans-serif; background-colo
 </style>
 """, unsafe_allow_html=True)
 
-# ── Load Data ─────────────────────────────────────────────────────────────────
-DATA_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "hour.csv")
+# Muat data
+DATA_PATH = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSxSI7pMaN11YErTn8eN9pRMWho1-CdQGBqyk5M4IMbD8cTLGWSWBbjrnCGh-o4COcZJHerW6ATVvSA/pub?output=csv"
 
 @st.cache_data
 def load_data():
@@ -79,7 +78,7 @@ def load_data():
 
 df = load_data()
 
-# ── Sidebar ───────────────────────────────────────────────────────────────────
+# Sidebar
 with st.sidebar:
     st.markdown("## 🚲 Filter Data")
     st.markdown("---")
@@ -102,7 +101,7 @@ with st.sidebar:
     </div>
     """, unsafe_allow_html=True)
 
-# ── Filter ────────────────────────────────────────────────────────────────────
+# Filter data sesuai pilihan sidebar
 dff = df.copy()
 if sel_musim != "Semua":
     dff = dff[dff["season_name"] == sel_musim]
@@ -111,7 +110,7 @@ if sel_tahun:
 if sel_cuaca:
     dff = dff[dff["weather_name"].isin(sel_cuaca)]
 
-# ── Header ────────────────────────────────────────────────────────────────────
+# Header
 st.markdown("""
 <div class="dash-header">
   <div style="font-size:2.8rem;">🚲</div>
@@ -122,7 +121,7 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# ── KPI Cards ─────────────────────────────────────────────────────────────────
+# KPI Cards
 total     = int(dff["cnt"].sum())
 kasual    = int(dff["casual"].sum())
 terdaftar = int(dff["registered"].sum())
@@ -146,30 +145,28 @@ for col, val, label, delta, color in [
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-# ── Konstanta warna & layout ──────────────────────────────────────────────────
+# Palet warna
 C = {
     "kasual":    "#FFB347",
     "terdaftar": "#118AB2",
     "teal":      "#06D6A0",
     "navy":      "#0F4C75",
     "red":       "#EF476F",
-    "grid":      "rgba(0,0,0,0.06)",
+    "grid":      "#D1D5DB",
 }
 BASE_LAYOUT = dict(
     plot_bgcolor="white", paper_bgcolor="white",
-    font=dict(family="DM Sans", color="#374151"),
+    font=dict(family="DM Sans", color="#000000"),
     legend=dict(bgcolor="rgba(0,0,0,0)", bordercolor="rgba(0,0,0,0)"),
     margin=dict(t=50, b=40, l=55, r=30),
 )
 SEASON_ORDER  = ["Spring", "Summer", "Fall", "Winter"]
 WEATHER_ORDER = ["Cerah", "Kabut/Mendung", "Hujan/Salju Ringan", "Hujan/Salju Lebat"]
 
-# ── TABS ──────────────────────────────────────────────────────────────────────
+# TABS
 tab1, tab2 = st.tabs(["🌿 Penyewaan per Musim", "🌦 Penyewaan per Cuaca"])
 
-# ╔══════════════════════════════════════════════════════════════════════════════╗
-# ║  TAB 1 · Penyewaan per Musim                                                 ║
-# ╚══════════════════════════════════════════════════════════════════════════════╝
+# TAB 1 · Penyewaan per Musim
 with tab1:
     st.markdown('<div class="section-title">Total Penyewaan Sepeda per Musim</div>', unsafe_allow_html=True)
     st.markdown('<div class="section-sub">Perbandingan pengguna kasual vs terdaftar per musim beserta pertumbuhan antar musim</div>', unsafe_allow_html=True)
@@ -192,13 +189,13 @@ with tab1:
         name="Kasual", x=s_agg["season_name"], y=s_agg["casual"],
         marker=dict(color=clr_k, line=dict(color="#333", width=1)),
         text=s_agg["casual"].apply(lambda v: f"{v:,.0f}"),
-        textposition="inside", textfont=dict(size=11, color="white"),
+        textposition="inside", textfont=dict(size=11, color="black"),
     ))
     fig1.add_trace(go.Bar(
         name="Terdaftar", x=s_agg["season_name"], y=s_agg["registered"],
         marker=dict(color=clr_r, line=dict(color="#333", width=1)),
         text=s_agg["registered"].apply(lambda v: f"{v:,.0f}"),
-        textposition="inside", textfont=dict(size=11, color="white"),
+        textposition="inside", textfont=dict(size=11, color="black"),
     ))
 
     annots = []
@@ -218,8 +215,8 @@ with tab1:
     fig1.update_layout(
         **BASE_LAYOUT, barmode="group", height=460, annotations=annots,
         title=dict(text="Total Penyewaan Sepeda per Musim dengan Pertumbuhan Musiman", font_size=14),
-        xaxis=dict(title="Musim",          showgrid=False, linecolor="#E5E7EB"),
-        yaxis=dict(title="Total Penyewaan", gridcolor=C["grid"], linecolor="#E5E7EB"),
+        xaxis=dict(title="Musim",          showgrid=False, linecolor="#9CA3AF"),
+        yaxis=dict(title="Total Penyewaan", gridcolor=C["grid"], linecolor="#9CA3AF"),
     )
     st.plotly_chart(fig1, use_container_width=True)
 
@@ -248,13 +245,12 @@ with tab1:
         ))
         fig1c.update_layout(paper_bgcolor="white", height=300,
                              margin=dict(t=20, b=20, l=20, r=20),
-                             font=dict(family="DM Sans"))
+                             font=dict(family="DM Sans", color="black"))
         st.plotly_chart(fig1c, use_container_width=True)
 
 
-# ╔══════════════════════════════════════════════════════════════════════════════╗
-# ║  TAB 2 · Penyewaan per Cuaca                                                 ║
-# ╚══════════════════════════════════════════════════════════════════════════════╝
+
+# TAB 2 · Penyewaan per Cuaca 
 with tab2:
     st.markdown('<div class="section-title">Rata-rata Penyewaan Berdasarkan Kondisi Cuaca</div>', unsafe_allow_html=True)
     st.markdown('<div class="section-sub">Perbandingan rata-rata harian antara tahun 2011 dan 2012 per kondisi cuaca</div>', unsafe_allow_html=True)
@@ -276,7 +272,7 @@ with tab2:
             name=yr, x=sub["weather_name"], y=sub["cnt"],
             marker=dict(color=yr_colors[yr], line=dict(color="#333", width=0.8)),
             text=sub["cnt"].apply(lambda v: f"{v:,.0f}"),
-            textposition="outside", textfont=dict(size=10),
+            textposition="outside", textfont=dict(size=10, color="black"),
         ))
 
     fig2.update_layout(
@@ -285,8 +281,8 @@ with tab2:
             text="Rata-rata Penyewaan Sepeda Harian berdasarkan Kondisi Cuaca (2011 vs 2012)",
             font_size=14,
         ),
-        xaxis=dict(title="Kondisi Cuaca",                   showgrid=False, linecolor="#E5E7EB", tickangle=-15),
-        yaxis=dict(title="Rata-rata Jumlah Penyewaan Harian", gridcolor=C["grid"], linecolor="#E5E7EB"),
+        xaxis=dict(title="Kondisi Cuaca",                   showgrid=False, linecolor="#9CA3AF", tickangle=-15),
+        yaxis=dict(title="Rata-rata Jumlah Penyewaan Harian", gridcolor=C["grid"], linecolor="#9CA3AF"),
     )
     st.plotly_chart(fig2, use_container_width=True)
 
@@ -303,7 +299,7 @@ with tab2:
         colorscale=[[0, "#EAF6FB"], [0.5, "#118AB2"], [1, "#0F4C75"]],
         text=np.round(heat_df.values, 0),
         texttemplate="%{text:,.0f}",
-        textfont_size=11,
+        textfont=dict(size=11, color="black"),
     ))
     fig2b.update_layout(paper_bgcolor="white", plot_bgcolor="white", height=260,
                          margin=dict(t=20, b=40, l=160, r=20),
@@ -314,6 +310,6 @@ with tab2:
 st.markdown("---")
 st.markdown("""
 <div style='text-align:center;font-size:0.78rem;color:#9CA3AF;padding:12px 0;'>
-  🚲 Bike Rental Analytics · Dataset: hour.csv (Capital Bikeshare 2011–2012) · Built with Streamlit + Plotly
+  © 2026 Bintang Qaulan Tsaqiila | Proyek Akhir Analisis Data
 </div>
 """, unsafe_allow_html=True)
