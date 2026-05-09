@@ -1,4 +1,3 @@
-import os
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -103,7 +102,7 @@ SEASON_ORDER  = ["Spring", "Summer", "Fall", "Winter"]
 WEATHER_ORDER = ["Cerah", "Kabut/Mendung", "Hujan/Salju Ringan", "Hujan/Salju Lebat"]
 
 # Load Data
-DATA_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "hour.csv")
+DATA_PATH = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSxSI7pMaN11YErTn8eN9pRMWho1-CdQGBqyk5M4IMbD8cTLGWSWBbjrnCGh-o4COcZJHerW6ATVvSA/pub?output=csv"
 
 @st.cache_data
 def load_data():
