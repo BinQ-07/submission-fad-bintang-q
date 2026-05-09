@@ -2,8 +2,10 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
+import plotly.express as px
+from plotly.subplots import make_subplots
 
-# Judul halaman dan ikon
+# ── Page Config ───────────────────────────────────────────────────────────────
 st.set_page_config(
     page_title="Bike Rental Analytics",
     page_icon="🚲",
@@ -11,7 +13,7 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# CSS kustom untuk styling dashboard
+# ── Custom CSS ────────────────────────────────────────────────────────────────
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
@@ -62,47 +64,53 @@ html, body, [class*="css"] { font-family: 'DM Sans', sans-serif; background-colo
 </style>
 """, unsafe_allow_html=True)
 
-# Load dataset
-DATA_PATH = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSxSI7pMaN11YErTn8eN9pRMWho1-CdQGBqyk5M4IMbD8cTLGWSWBbjrnCGh-o4COcZJHerW6ATVvSA/pubhtml"
+# ── Load Data ─────────────────────────────────────────────────────────────────
 
-# Fungsi untuk load data dengan caching agar lebih cepat saat interaksi ulang
+PATH = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSxSI7pMaN11YErTn8eN9pRMWho1-CdQGBqyk5M4IMbD8cTLGWSWBbjrnCGh-o4COcZJHerW6ATVvSA/pub?output=csv"
 @st.cache_data
 def load_data():
-    df = pd.read_csv(DATA_PATH)
+    df = pd.read_csv(PATH)
     df["dteday"] = pd.to_datetime(df["dteday"])
-    df["season_name"]  = df["season"].map({1:"Spring", 2:"Summer", 3:"Fall", 4:"Winter"})
-    df["weather_name"] = df["weathersit"].map({
-        1:"Cerah", 2:"Kabut/Mendung", 3:"Hujan/Salju Ringan", 4:"Hujan/Salju Lebat"
-    })
-    df["year_label"] = df["yr"].map({0:"2011", 1:"2012"})
+
+    season_map  = {1:"Spring", 2:"Summer", 3:"Fall",  4:"Winter"}
+    weather_map = {1:"Cerah", 2:"Kabut/Mendung", 3:"Hujan/Salju Ringan", 4:"Hujan/Salju Lebat"}
+    month_names = {1:"Jan",2:"Feb",3:"Mar",4:"Apr",5:"Mei",6:"Jun",
+                   7:"Jul",8:"Agu",9:"Sep",10:"Okt",11:"Nov",12:"Des"}
+    weekday_map = {0:"Minggu",1:"Senin",2:"Selasa",3:"Rabu",4:"Kamis",5:"Jumat",6:"Sabtu"}
+
+    df["season_name"]  = df["season"].map(season_map)
+    df["weather_name"] = df["weathersit"].map(weather_map)
+    df["month_name"]   = df["mnth"].map(month_names)
+    df["weekday_name"] = df["weekday"].map(weekday_map)
+    df["year_label"]   = df["yr"].map({0:"2011", 1:"2012"})
     return df
 
 df = load_data()
 
-# Sidebar untuk filter data
+# ── Sidebar ───────────────────────────────────────────────────────────────────
 with st.sidebar:
     st.markdown("## 🚲 Filter Data")
     st.markdown("---")
 
-    sel_musim  = st.selectbox("🌤 Pilih Musim",
-                              ["Semua"] + sorted(df["season_name"].unique().tolist()))
-    sel_tahun  = st.multiselect("📅 Pilih Tahun",
-                                sorted(df["year_label"].unique().tolist()),
-                                default=sorted(df["year_label"].unique().tolist()))
-    sel_cuaca  = st.multiselect("🌦 Kondisi Cuaca",
-                                sorted(df["weather_name"].unique().tolist()),
-                                default=sorted(df["weather_name"].unique().tolist()))
+    season_opts  = ["Semua"] + sorted(df["season_name"].unique().tolist())
+    year_opts    = sorted(df["year_label"].unique().tolist())
+    weather_opts = sorted(df["weather_name"].unique().tolist())
+
+    sel_musim  = st.selectbox("🌤 Pilih Musim",  season_opts)
+    sel_tahun  = st.multiselect("📅 Pilih Tahun", year_opts, default=year_opts)
+    sel_cuaca  = st.multiselect("🌦 Kondisi Cuaca", weather_opts, default=weather_opts)
+
     st.markdown("---")
     st.markdown("""
     <div style='font-size:0.75rem;color:#A8D8EA;line-height:1.7;'>
     <b style='color:#06D6A0;'>Dataset:</b> Capital Bikeshare<br>
-    <b style='color:#06D6A0;'>File:</b> data/hour.csv<br>
+    <b style='color:#06D6A0;'>File:</b> hour.csv<br>
     <b style='color:#06D6A0;'>Periode:</b> 2011 – 2012<br>
     <b style='color:#06D6A0;'>Records:</b> 17,379 jam
     </div>
     """, unsafe_allow_html=True)
 
-# Filter data berdasarkan pilihan di sidebar
+# ── Filter ────────────────────────────────────────────────────────────────────
 dff = df.copy()
 if sel_musim != "Semua":
     dff = dff[dff["season_name"] == sel_musim]
@@ -111,18 +119,18 @@ if sel_tahun:
 if sel_cuaca:
     dff = dff[dff["weather_name"].isin(sel_cuaca)]
 
-# Header utama
+# ── Header ────────────────────────────────────────────────────────────────────
 st.markdown("""
 <div class="dash-header">
   <div style="font-size:2.8rem;">🚲</div>
   <div>
     <h1>Bike Rental Analytics</h1>
-    <p>Eksplorasi pola peminjaman sepeda berdasarkan musim dan kondisi cuaca · Dataset: hour.csv</p>
+    <p>Eksplorasi pola peminjaman sepeda berdasarkan waktu, musim, dan kondisi cuaca · Dataset: hour.csv</p>
   </div>
 </div>
 """, unsafe_allow_html=True)
 
-# KPI Cards
+# ── KPI Cards ─────────────────────────────────────────────────────────────────
 total     = int(dff["cnt"].sum())
 kasual    = int(dff["casual"].sum())
 terdaftar = int(dff["registered"].sum())
@@ -131,10 +139,10 @@ rata_hr   = round(dff.groupby("dteday")["cnt"].sum().mean(), 0)
 
 c1, c2, c3, c4 = st.columns(4)
 for col, val, label, delta, color in [
-    (c1, f"{total:,}",      "Total Peminjaman",   f"↑ {rasio}% terdaftar",                                    "#06D6A0"),
-    (c2, f"{kasual:,}",     "Pengguna Kasual",    f"{round(kasual/total*100,1) if total else 0}% dari total",  "#FFB347"),
-    (c3, f"{terdaftar:,}",  "Pengguna Terdaftar", f"{rasio}% dari total",                                      "#118AB2"),
-    (c4, f"{rata_hr:,.0f}", "Rata-rata/Hari",     f"{len(dff['dteday'].unique())} hari data",                  "#EF476F"),
+    (c1, f"{total:,}",       "Total Peminjaman",      f"↑ {rasio}% terdaftar",              "#06D6A0"),
+    (c2, f"{kasual:,}",      "Pengguna Kasual",        f"{round(kasual/total*100,1) if total else 0}% dari total", "#FFB347"),
+    (c3, f"{terdaftar:,}",   "Pengguna Terdaftar",    f"{rasio}% dari total",               "#118AB2"),
+    (c4, f"{rata_hr:,.0f}",  "Rata-rata/Hari",        f"{len(dff['dteday'].unique())} hari data", "#EF476F"),
 ]:
     with col:
         st.markdown(f"""
@@ -146,93 +154,96 @@ for col, val, label, delta, color in [
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-# Warna tema untuk konsistensi visualisasi
-C = {
-    "kasual":    "#FFB347",
-    "terdaftar": "#118AB2",
-    "teal":      "#06D6A0",
-    "navy":      "#0F4C75",
-    "red":       "#EF476F",
-    "grid":      "rgba(0,0,0,0.06)",
-}
+# ── Warna & Layout ────────────────────────────────────────────────────────────
+C = {"kasual":"#FFB347","terdaftar":"#118AB2","teal":"#06D6A0",
+     "navy":"#0F4C75","red":"#EF476F","grid":"rgba(0,0,0,0.06)"}
+
 BASE_LAYOUT = dict(
     plot_bgcolor="white", paper_bgcolor="white",
     font=dict(family="DM Sans", color="#374151"),
     legend=dict(bgcolor="rgba(0,0,0,0)", bordercolor="rgba(0,0,0,0)"),
     margin=dict(t=50, b=40, l=55, r=30),
 )
-SEASON_ORDER  = ["Spring", "Summer", "Fall", "Winter"]
-WEATHER_ORDER = ["Cerah", "Kabut/Mendung", "Hujan/Salju Ringan", "Hujan/Salju Lebat"]
 
-# TABS
-tab1, tab2 = st.tabs(["🌿 Penyewaan per Musim", "🌦 Penyewaan per Cuaca"])
+# ── TABS ──────────────────────────────────────────────────────────────────────
+tab1, tab2, tab3, tab4 = st.tabs([
+    "🌿 Penyewaan per Musim",
+    "🌦 Penyewaan per Cuaca",
+    "📊 Perbandingan Pengguna",
+    "⏰ Pola Per Jam",
+])
 
-
-# TAB 1 · Penyewaan per Musim                   
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# ║  TAB 1 · Penyewaan per Musim  (dari data reg dan casual per musim.txt)      ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
 with tab1:
     st.markdown('<div class="section-title">Total Penyewaan Sepeda per Musim</div>', unsafe_allow_html=True)
     st.markdown('<div class="section-sub">Perbandingan pengguna kasual vs terdaftar per musim beserta pertumbuhan antar musim</div>', unsafe_allow_html=True)
 
-    # Agregasi: sum per hari → sum total (hindari double-count per jam)
-    day_agg = dff.groupby(["dteday", "season_name"], as_index=False)[["casual", "registered", "cnt"]].sum()
-    s_agg   = day_agg.groupby("season_name", as_index=False)[["casual", "registered", "cnt"]].sum()
-    s_agg["season_name"] = pd.Categorical(s_agg["season_name"], categories=SEASON_ORDER, ordered=True)
-    s_agg = s_agg.sort_values("season_name").reset_index(drop=True)
-    s_agg["pct_change"] = s_agg["cnt"].pct_change() * 100
+    season_order = ["Spring","Summer","Fall","Winter"]
 
-    max_cas_season = s_agg.loc[s_agg["casual"].idxmax(),     "season_name"]
-    max_reg_season = s_agg.loc[s_agg["registered"].idxmax(), "season_name"]
+    # Agregasi — agregat per hari dulu lalu sum, agar tidak double-count jam
+    day_agg = dff.groupby(["dteday","season_name"], as_index=False)[["casual","registered","cnt"]].sum()
+    seasonal_agg = day_agg.groupby("season_name", as_index=False)[["casual","registered","cnt"]].sum()
+    seasonal_agg["season_name"] = pd.Categorical(seasonal_agg["season_name"], categories=season_order, ordered=True)
+    seasonal_agg = seasonal_agg.sort_values("season_name").reset_index(drop=True)
+    seasonal_agg["pct_change"] = seasonal_agg["cnt"].pct_change() * 100
 
-    clr_k = [C["navy"] if s == max_cas_season else C["kasual"]    for s in s_agg["season_name"]]
-    clr_r = [C["teal"] if s == max_reg_season else C["terdaftar"] for s in s_agg["season_name"]]
+    max_casual_season     = seasonal_agg.loc[seasonal_agg["casual"].idxmax(),    "season_name"]
+    max_registered_season = seasonal_agg.loc[seasonal_agg["registered"].idxmax(),"season_name"]
+
+    # Warna bar: lebih gelap pada nilai maks
+    clr_kasual    = [C["navy"]   if s==max_casual_season     else C["kasual"]    for s in seasonal_agg["season_name"]]
+    clr_terdaftar = [C["teal"]   if s==max_registered_season else C["terdaftar"] for s in seasonal_agg["season_name"]]
 
     fig1 = go.Figure()
     fig1.add_trace(go.Bar(
-        name="Kasual", x=s_agg["season_name"], y=s_agg["casual"],
-        marker=dict(color=clr_k, line=dict(color="#333", width=1)),
-        text=s_agg["casual"].apply(lambda v: f"{v:,.0f}"),
+        name="Kasual", x=seasonal_agg["season_name"], y=seasonal_agg["casual"],
+        marker=dict(color=clr_kasual, line=dict(color="#333", width=1)),
+        text=seasonal_agg["casual"].apply(lambda v: f"{v:,.0f}"),
         textposition="inside", textfont=dict(size=11, color="white"),
     ))
     fig1.add_trace(go.Bar(
-        name="Terdaftar", x=s_agg["season_name"], y=s_agg["registered"],
-        marker=dict(color=clr_r, line=dict(color="#333", width=1)),
-        text=s_agg["registered"].apply(lambda v: f"{v:,.0f}"),
+        name="Terdaftar", x=seasonal_agg["season_name"], y=seasonal_agg["registered"],
+        marker=dict(color=clr_terdaftar, line=dict(color="#333", width=1)),
+        text=seasonal_agg["registered"].apply(lambda v: f"{v:,.0f}"),
         textposition="inside", textfont=dict(size=11, color="white"),
     ))
 
-    annots = []
-    for _, row in s_agg.iterrows():
+    # Label % perubahan
+    annotations = []
+    for _, row in seasonal_agg.iterrows():
         if not np.isnan(row["pct_change"]):
-            clr_lbl   = C["red"] if row["pct_change"] < 0 else "#16A34A"
-            arrow_chr = "↑" if row["pct_change"] >= 0 else "↓"
-            annots.append(dict(
+            max_val = max(row["casual"], row["registered"])
+            color_lbl = C["red"] if row["pct_change"] < 0 else "#16A34A"
+            annotations.append(dict(
                 x=row["season_name"],
-                y=max(row["casual"], row["registered"]) + s_agg["cnt"].max() * 0.03,
-                text=f"{arrow_chr} {abs(row['pct_change']):.1f}%",
-                showarrow=False,
-                font=dict(color=clr_lbl, size=13, family="Space Mono"),
+                y=max_val + seasonal_agg["cnt"].max() * 0.03,
+                text=f"{'↑' if row['pct_change']>=0 else '↓'} {abs(row['pct_change']):.1f}%",
+                showarrow=False, font=dict(color=color_lbl, size=13, family="Space Mono"),
                 xanchor="center",
             ))
 
     fig1.update_layout(
-        **BASE_LAYOUT, barmode="group", height=460, annotations=annots,
+        **BASE_LAYOUT, barmode="group", height=460,
         title=dict(text="Total Penyewaan Sepeda per Musim dengan Pertumbuhan Musiman", font_size=14),
-        xaxis=dict(title="Musim",          showgrid=False, linecolor="#E5E7EB"),
+        xaxis=dict(title="Musim", showgrid=False, linecolor="#E5E7EB"),
         yaxis=dict(title="Total Penyewaan", gridcolor=C["grid"], linecolor="#E5E7EB"),
+        annotations=annotations,
     )
     st.plotly_chart(fig1, use_container_width=True)
 
-
+    # Insight ringkas
     col_a, col_b = st.columns(2)
     with col_a:
         st.markdown('<div class="section-title" style="font-size:0.9rem;">Proporsi Kasual vs Terdaftar per Musim</div>', unsafe_allow_html=True)
         fig1b = go.Figure()
-        for name, clr in [("casual", C["kasual"]), ("registered", C["terdaftar"])]:
+        for name, col_color in [("casual", C["kasual"]), ("registered", C["terdaftar"])]:
             fig1b.add_trace(go.Bar(
                 name=name.capitalize(),
-                x=s_agg["season_name"],
-                y=s_agg[name] / s_agg["cnt"] * 100,
-                marker_color=clr,
+                x=seasonal_agg["season_name"],
+                y=seasonal_agg[name] / seasonal_agg["cnt"] * 100,
+                marker_color=col_color,
             ))
         fig1b.update_layout(**BASE_LAYOUT, barmode="stack", height=300,
                              yaxis=dict(title="%", gridcolor=C["grid"]),
@@ -242,34 +253,40 @@ with tab1:
     with col_b:
         st.markdown('<div class="section-title" style="font-size:0.9rem;">Kontribusi per Musim</div>', unsafe_allow_html=True)
         fig1c = go.Figure(go.Pie(
-            labels=s_agg["season_name"], values=s_agg["cnt"],
-            marker_colors=["#A8D8EA", "#118AB2", "#06D6A0", "#0F4C75"],
+            labels=seasonal_agg["season_name"],
+            values=seasonal_agg["cnt"],
+            marker_colors=["#A8D8EA","#118AB2","#06D6A0","#0F4C75"],
             hole=0.5, textinfo="label+percent",
         ))
         fig1c.update_layout(paper_bgcolor="white", height=300,
-                             margin=dict(t=20, b=20, l=20, r=20),
+                             margin=dict(t=20,b=20,l=20,r=20),
                              font=dict(family="DM Sans"))
         st.plotly_chart(fig1c, use_container_width=True)
 
 
-# TAB 2 · Penyewaan per Cuaca
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# ║  TAB 2 · Penyewaan per Cuaca  (dari visualisasi data per cuaca.txt)         ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
 with tab2:
     st.markdown('<div class="section-title">Rata-rata Penyewaan Berdasarkan Kondisi Cuaca</div>', unsafe_allow_html=True)
     st.markdown('<div class="section-sub">Perbandingan rata-rata harian antara tahun 2011 dan 2012 per kondisi cuaca</div>', unsafe_allow_html=True)
 
-    weather_labels = {1:"Cerah", 2:"Kabut/Mendung", 3:"Hujan/Salju Ringan", 4:"Hujan/Salju Lebat"}
+    weather_order  = ["Cerah","Kabut/Mendung","Hujan/Salju Ringan","Hujan/Salju Lebat"]
+    weather_labels = {1:"Cerah",2:"Kabut/Mendung",3:"Hujan/Salju Ringan",4:"Hujan/Salju Lebat"}
 
-    day_w   = dff.groupby(["dteday", "weathersit", "year_label"], as_index=False)["cnt"].sum()
-    w_agg   = day_w.groupby(["weathersit", "year_label"], as_index=False)["cnt"].mean()
-    w_agg["weather_name"] = w_agg["weathersit"].map(weather_labels)
-    w_agg["weather_name"] = pd.Categorical(w_agg["weather_name"], categories=WEATHER_ORDER, ordered=True)
-    w_agg   = w_agg.sort_values("weather_name")
+    # Rata-rata per hari lalu average antar hari
+    day_weather = dff.groupby(["dteday","weathersit","year_label"], as_index=False)["cnt"].sum()
+    weather_agg = day_weather.groupby(["weathersit","year_label"], as_index=False)["cnt"].mean()
+    weather_agg["weather_name"] = weather_agg["weathersit"].map(weather_labels)
+    weather_agg["weather_name"] = pd.Categorical(weather_agg["weather_name"], categories=weather_order, ordered=True)
+    weather_agg = weather_agg.sort_values("weather_name")
 
-    yr_colors = {"2011": "#440154", "2012": "#35B779"}
+    # Viridis manual 2 step
+    yr_colors = {"2011":"#440154","2012":"#35B779"}
 
     fig2 = go.Figure()
-    for yr in ["2011", "2012"]:
-        sub = w_agg[w_agg["year_label"] == yr]
+    for yr in ["2011","2012"]:
+        sub = weather_agg[weather_agg["year_label"]==yr]
         fig2.add_trace(go.Bar(
             name=yr, x=sub["weather_name"], y=sub["cnt"],
             marker=dict(color=yr_colors[yr], line=dict(color="#333", width=0.8)),
@@ -279,39 +296,146 @@ with tab2:
 
     fig2.update_layout(
         **BASE_LAYOUT, barmode="group", height=460,
-        title=dict(
-            text="Rata-rata Penyewaan Sepeda Harian berdasarkan Kondisi Cuaca (2011 vs 2012)",
-            font_size=14,
-        ),
-        xaxis=dict(title="Kondisi Cuaca",                   showgrid=False, linecolor="#E5E7EB", tickangle=-15),
-        yaxis=dict(title="Rata-rata Jumlah Penyewaan Harian", gridcolor=C["grid"], linecolor="#E5E7EB"),
+        title=dict(text="Rata-rata Penyewaan Sepeda Harian berdasarkan Kondisi Cuaca (2011 vs 2012)", font_size=14),
+        xaxis=dict(title="Kondisi Cuaca", showgrid=False, linecolor="#E5E7EB",
+                   tickangle=-20),
+        yaxis=dict(title="Rata-rata Jumlah Penyewaan Harian", gridcolor=C["grid"],
+                   linecolor="#E5E7EB"),
     )
     st.plotly_chart(fig2, use_container_width=True)
 
+    # Heatmap weathersit x season
     st.markdown('<div class="section-title" style="font-size:0.9rem; margin-top:4px;">Peta Panas: Cuaca × Musim</div>', unsafe_allow_html=True)
-    heat_df = dff.groupby(["weather_name", "season_name"])["cnt"].mean().unstack(fill_value=0)
-    heat_df = heat_df.reindex(
-        index  =[w for w in WEATHER_ORDER if w in heat_df.index],
-        columns=[s for s in SEASON_ORDER  if s in heat_df.columns],
-    )
+    heat_df = dff.groupby(["weather_name","season_name"])["cnt"].mean().unstack(fill_value=0)
+    # Urutkan
+    heat_df = heat_df.reindex(index=[w for w in weather_order if w in heat_df.index],
+                               columns=[s for s in ["Spring","Summer","Fall","Winter"] if s in heat_df.columns])
+
     fig2b = go.Figure(go.Heatmap(
         z=heat_df.values,
         x=heat_df.columns.tolist(),
         y=heat_df.index.tolist(),
-        colorscale=[[0, "#EAF6FB"], [0.5, "#118AB2"], [1, "#0F4C75"]],
+        colorscale=[[0,"#EAF6FB"],[0.5,"#118AB2"],[1,"#0F4C75"]],
         text=np.round(heat_df.values, 0),
         texttemplate="%{text:,.0f}",
         textfont_size=11,
     ))
     fig2b.update_layout(paper_bgcolor="white", plot_bgcolor="white", height=260,
-                         margin=dict(t=20, b=40, l=160, r=20),
+                         margin=dict(t=20,b=40,l=160,r=20),
                          font=dict(family="DM Sans"))
     st.plotly_chart(fig2b, use_container_width=True)
 
-# Footer
+
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# ║  TAB 3 · Perbandingan Kasual vs Terdaftar per Bulan                         ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
+with tab3:
+    st.markdown('<div class="section-title">Jumlah Pengguna Kasual vs Terdaftar per Bulan</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-sub">Agregasi bulanan dari data per jam · hour.csv</div>', unsafe_allow_html=True)
+
+    month_order = ["Jan","Feb","Mar","Apr","Mei","Jun","Jul","Agu","Sep","Okt","Nov","Des"]
+
+    monthly = dff.groupby("mnth", as_index=False)[["casual","registered"]].sum()
+    monthly["bulan"] = monthly["mnth"].map(
+        {i+1: m for i, m in enumerate(month_order)}
+    )
+    monthly = monthly.sort_values("mnth")
+
+    avg_k = monthly["casual"].mean()
+    avg_r = monthly["registered"].mean()
+
+    fig3 = go.Figure()
+    fig3.add_trace(go.Bar(name="Kasual", x=monthly["bulan"], y=monthly["casual"],
+                          marker_color=C["kasual"], marker_line_width=0))
+    fig3.add_trace(go.Bar(name="Terdaftar", x=monthly["bulan"], y=monthly["registered"],
+                          marker_color=C["terdaftar"], marker_line_width=0))
+    fig3.add_hline(y=avg_k, line_dash="dot", line_color="#FF6B35",
+                   annotation_text=f"Rata-rata Kasual: {avg_k:,.0f}",
+                   annotation_font_color="#FF6B35")
+    fig3.add_hline(y=avg_r, line_dash="dot", line_color=C["teal"],
+                   annotation_text=f"Rata-rata Terdaftar: {avg_r:,.0f}",
+                   annotation_position="bottom right",
+                   annotation_font_color=C["teal"])
+    fig3.update_layout(
+        **BASE_LAYOUT, barmode="group", height=440,
+        title=dict(text="Jumlah Pengguna per Bulan", font_size=14),
+        xaxis=dict(showgrid=False, linecolor="#E5E7EB"),
+        yaxis=dict(gridcolor=C["grid"], linecolor="#E5E7EB"),
+    )
+    st.plotly_chart(fig3, use_container_width=True)
+
+    col_x, col_y = st.columns(2)
+    with col_x:
+        st.markdown('<div class="section-title" style="font-size:0.9rem;">Komposisi Stacked per Bulan</div>', unsafe_allow_html=True)
+        fig3b = go.Figure()
+        fig3b.add_trace(go.Bar(name="Kasual",    x=monthly["bulan"], y=monthly["casual"],    marker_color=C["kasual"]))
+        fig3b.add_trace(go.Bar(name="Terdaftar", x=monthly["bulan"], y=monthly["registered"],marker_color=C["terdaftar"]))
+        fig3b.update_layout(**BASE_LAYOUT, barmode="stack", height=300, showlegend=False,
+                              xaxis=dict(showgrid=False), yaxis=dict(gridcolor=C["grid"]))
+        st.plotly_chart(fig3b, use_container_width=True)
+
+    with col_y:
+        st.markdown('<div class="section-title" style="font-size:0.9rem;">Proporsi Keseluruhan</div>', unsafe_allow_html=True)
+        fig3c = go.Figure(go.Pie(
+            labels=["Kasual","Terdaftar"],
+            values=[dff["casual"].sum(), dff["registered"].sum()],
+            marker_colors=[C["kasual"], C["terdaftar"]],
+            hole=0.55, textinfo="label+percent",
+        ))
+        fig3c.update_layout(paper_bgcolor="white", height=300,
+                              margin=dict(t=20,b=20,l=20,r=20),
+                              font=dict(family="DM Sans"))
+        st.plotly_chart(fig3c, use_container_width=True)
+
+
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# ║  TAB 4 · Pola Per Jam                                                        ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
+with tab4:
+    st.markdown('<div class="section-title">Pola Peminjaman Berdasarkan Jam</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-sub">Rata-rata peminjaman per jam · hari kerja vs akhir pekan</div>', unsafe_allow_html=True)
+
+    hourly_work = dff[dff["workingday"]==1].groupby("hr")["cnt"].mean().reset_index()
+    hourly_wknd = dff[dff["workingday"]==0].groupby("hr")["cnt"].mean().reset_index()
+
+    fig4 = go.Figure()
+    fig4.add_trace(go.Scatter(
+        name="Hari Kerja", x=hourly_work["hr"], y=hourly_work["cnt"],
+        mode="lines", fill="tozeroy",
+        line=dict(color=C["terdaftar"], width=3),
+        fillcolor="rgba(17,138,178,0.15)",
+    ))
+    fig4.add_trace(go.Scatter(
+        name="Akhir Pekan", x=hourly_wknd["hr"], y=hourly_wknd["cnt"],
+        mode="lines", fill="tozeroy",
+        line=dict(color=C["kasual"], width=3),
+        fillcolor="rgba(255,179,71,0.15)",
+    ))
+    fig4.update_layout(
+        **BASE_LAYOUT, height=420,
+        title=dict(text="Rata-rata Peminjaman per Jam", font_size=14),
+        xaxis=dict(title="Jam", tickmode="linear", dtick=2, showgrid=False, linecolor="#E5E7EB"),
+        yaxis=dict(title="Rata-rata Peminjaman", gridcolor=C["grid"], linecolor="#E5E7EB"),
+    )
+    st.plotly_chart(fig4, use_container_width=True)
+
+    # Breakdown kasual vs terdaftar per jam
+    st.markdown('<div class="section-title" style="font-size:0.9rem; margin-top:4px;">Kasual vs Terdaftar per Jam</div>', unsafe_allow_html=True)
+    hourly_type = dff.groupby("hr")[["casual","registered"]].mean().reset_index()
+    fig4b = go.Figure()
+    fig4b.add_trace(go.Bar(name="Kasual",    x=hourly_type["hr"], y=hourly_type["casual"],    marker_color=C["kasual"],    marker_line_width=0))
+    fig4b.add_trace(go.Bar(name="Terdaftar", x=hourly_type["hr"], y=hourly_type["registered"],marker_color=C["terdaftar"],  marker_line_width=0))
+    fig4b.update_layout(
+        **BASE_LAYOUT, barmode="stack", height=320,
+        xaxis=dict(title="Jam", tickmode="linear", dtick=2, showgrid=False, linecolor="#E5E7EB"),
+        yaxis=dict(title="Rata-rata", gridcolor=C["grid"], linecolor="#E5E7EB"),
+    )
+    st.plotly_chart(fig4b, use_container_width=True)
+
+# ── Footer ────────────────────────────────────────────────────────────────────
 st.markdown("---")
 st.markdown("""
 <div style='text-align:center;font-size:0.78rem;color:#9CA3AF;padding:12px 0;'>
-  © 2026 Bintang Qaulan Tsaqiila | Proyek Akhir Analisis Data
+  🚲 Bike Rental Analytics · Dataset: hour.csv (Capital Bikeshare 2011–2012) · Built with Streamlit + Plotly
 </div>
 """, unsafe_allow_html=True)
